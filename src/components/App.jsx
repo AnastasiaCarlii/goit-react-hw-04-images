@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getImages } from 'services/api';
 
@@ -9,115 +9,79 @@ import Button from './Button/Button';
 
 import MyModal from './Modal/MyModal';
 
-export default class App extends Component {
-  state = {
-    query: '',
-    page: 1,
-    images: [],
-    totalImages: 0,
-    showModal: false,
-    largeImageURL: '',
-    tags: '',
-    loading: false,
-    error: null,
-  };
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [totalImages, setTotalImages] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImageURL, setLargeImageURL] = useState('');
+  const [tags, setTags] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  useEffect(() => {
+    if (!query) return;
 
-  export default function App(){
-    const[query, setQuery]=useState('');
-    const[page, setPage]=useState(1);
-    const[images, setImages]=useState([]);
-    const[totalImages, setTotalImages]=useState(0);
-    const[showModal, setShowModal]=useState(false);
-    const[largeImageURL, setLargeImageURL]=useState('');
-    const[tags, setTags]=useState('');
-    const[loading, setLoading]=useState(false);
-    const[error, setError]=useState(null);
+    const fetchImages = async () => {
+      try {
+        setLoading(true);
+        const { hits, totalHits } = await getImages(query, page);
+        if (hits.length === 0) {
+          return alert('we dont find any images');
+        }
 
-    
-  }
-
-  componentDidUpdate(_, prevState) {
-    const { query, page } = this.state;
-    if (prevState.query !== query || prevState.page !== page) {
-      this.fetchImages(query, page);
-    }
-  }
-
-  fetchImages = async (query, page) => {
-    try {
-      this.setState({ loading: true });
-      const { hits, totalHits } = await getImages(query, page);
-      if (hits.length === 0) {
-        return alert('we dont find any images');
+        setImages(prevImages => [...prevImages, ...hits]);
+        setTotalImages(totalHits);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
-      this.setState(prevState => ({
-        images: [...prevState.images, ...hits],
-        totalImages: totalHits,
-      }));
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ loading: false });
-    }
+    };
+    fetchImages();
+  }, [query, page]);
+
+  const onHandleSubmit = value => {
+    setQuery(value);
+    setPage(1);
+    setImages([]);
+  };
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
+  };
+  const openModalWindow = (largeImageURL, tags) => {
+    setShowModal(true);
+    setLargeImageURL(largeImageURL);
+    setTags(tags);
   };
 
-  onHandleSubmit = value => {
-    this.setState({
-      query: value,
-      page: 1,
-      images: [],
-    });
+  const handleCloseModalWindow = () => {
+    setShowModal(false);
+    setLargeImageURL('');
+    setTags('');
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
-  };
+  const allPage = totalImages / images.length;
+  return (
+    <div>
+      <Searchbar onSubmit={onHandleSubmit} />
+      {loading && <Loader />}
+      {error && <p style={{ color: 'red' }}>something went wrong</p>}
+      {images.length !== 0 && (
+        <ImageGallery images={images} openModalWindow={openModalWindow} />
+      )}
 
-  openModalWindow = (largeImageURL, tags) => {
-    this.setState({ showModal: true, largeImageURL, tags });
-  };
+      {allPage > 1 && !loading && images.length > 0 && (
+        <Button onClick={handleLoadMore} />
+      )}
 
-  handleCloseModalWindow = () => {
-    this.setState({ showModal: false, largeImageURL: '', tags: '' });
-  };
-
-  render() {
-    const {
-      images,
-      loading,
-      totalImages,
-      showModal,
-      largeImageURL,
-      tags,
-      error,
-    } = this.state;
-    const allPage = totalImages / images.length;
-    return (
-      <div>
-        <Searchbar onSubmit={this.onHandleSubmit} />
-        {loading && <Loader />}
-        {error && <p style={{ color: 'red' }}>something went wrong</p>}
-        {images.length !== 0 && (
-          <ImageGallery
-            images={images}
-            openModalWindow={this.openModalWindow}
-          />
-        )}
-
-        {allPage > 1 && !loading && images.length > 0 && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-
-        <MyModal
-          largeImageURL={largeImageURL}
-          tags={tags}
-          modalIsOpen={showModal}
-          closeModal={this.handleCloseModalWindow}
-        />
-      </div>
-    );
-  }
+      <MyModal
+        largeImageURL={largeImageURL}
+        tags={tags}
+        modalIsOpen={showModal}
+        closeModal={handleCloseModalWindow}
+      />
+    </div>
+  );
 }
