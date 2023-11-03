@@ -22,6 +22,21 @@ export default class App extends Component {
     error: null,
   };
 
+
+  export default function App(){
+    const[query, setQuery]=useState('');
+    const[page, setPage]=useState(1);
+    const[images, setImages]=useState([]);
+    const[totalImages, setTotalImages]=useState(0);
+    const[showModal, setShowModal]=useState(false);
+    const[largeImageURL, setLargeImageURL]=useState('');
+    const[tags, setTags]=useState('');
+    const[loading, setLoading]=useState(false);
+    const[error, setError]=useState(null);
+
+    
+  }
+
   componentDidUpdate(_, prevState) {
     const { query, page } = this.state;
     if (prevState.query !== query || prevState.page !== page) {
